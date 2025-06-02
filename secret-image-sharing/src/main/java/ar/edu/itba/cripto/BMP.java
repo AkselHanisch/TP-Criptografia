@@ -27,54 +27,42 @@ public class BMP {
         this(pixels, 0, 0);
     }
 
-    public BMP(String filename) throws IOException{
-
-        try (DataInputStream stream = new DataInputStream(new BufferedInputStream(Files.newInputStream(Paths.get(filename))))){
-
-            if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M'){
-                throw new IOException("Not a valid BMP file");
+    public BMP(String filename) throws IOException {
+        try (DataInputStream stream = new DataInputStream(new BufferedInputStream(Files.newInputStream(Paths.get(filename))))) {
+            if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M') {
+                throw new IOException("Not a valid BMP file: " + filename);
             }
-            stream.skipBytes(4);
-            seed = Short.reverseBytes(stream.readShort()) & 0xFFFF;
-            order = Short.reverseBytes(stream.readShort()) & 0xFFFF;
-
-            int bitmapOffset = Integer.reverseBytes(stream.readInt());
-
-            int bitmapInfoHeaderLength = Integer.reverseBytes(stream.readInt());
-            if (bitmapInfoHeaderLength != 40){
-                throw new IOException("Unsupported BMP version (must be Windows 3.x format)");
+            stream.skipBytes(4); // Skip file size (bytes 2-5)
+            stream.skipBytes(4); // Skip reserved (bytes 6-9)
+            int bitmapOffset = Integer.reverseBytes(stream.readInt()); // Bytes 10-13
+            int bitmapInfoHeaderLength = Integer.reverseBytes(stream.readInt()); // Bytes 14-17
+            if (bitmapInfoHeaderLength != 40) {
+                throw new IOException("Unsupported BMP version (header size " + bitmapInfoHeaderLength + ", expected 40): " + filename);
             }
-
-            width = Integer.reverseBytes(stream.readInt());
-            height = Integer.reverseBytes(stream.readInt());
-
-            stream.skipBytes(2);
-
-            int bitsPerPixel = Short.reverseBytes(stream.readShort()) & 0xFFFF;
-            if (bitsPerPixel != 8){
-                throw new IOException("Unsupported BPM format (must be 8 bits per pixel)");
+            width = Integer.reverseBytes(stream.readInt()); // Bytes 18-21
+            height = Integer.reverseBytes(stream.readInt()); // Bytes 22-25
+            stream.skipBytes(2); // Skip planes (bytes 26-27)
+            int bitsPerPixel = Short.reverseBytes(stream.readShort()) & 0xFFFF; // Bytes 28-29
+            if (bitsPerPixel != 8) {
+                throw new IOException("Unsupported BMP format (bits per pixel " + bitsPerPixel + ", expected 8): " + filename);
             }
-
-            int compressionType = Integer.reverseBytes(stream.readInt());
-            if (compressionType != 0){
-                throw new IOException("BMP file must be uncompressed");
+            int compressionType = Integer.reverseBytes(stream.readInt()); // Bytes 30-33
+            if (compressionType != 0) {
+                throw new IOException("BMP file compressed (compression type " + compressionType + "): " + filename);
             }
-
             int rowSize = ((width + 3) / 4) * 4;
             int padding = rowSize - width;
-
             pixels = new byte[height][width];
-
             long skipped = stream.skip(bitmapOffset - HEADER_BYTES_READ);
-            if (skipped < (bitmapOffset - HEADER_BYTES_READ)) {
-                throw new IOException("Could not read BMP image data");
+            if (skipped != bitmapOffset - HEADER_BYTES_READ) {
+                throw new IOException("Failed to reach pixel data (offset " + bitmapOffset + ", skipped " + skipped + " of " + (bitmapOffset - HEADER_BYTES_READ) + "): " + filename);
             }
-
             for (int row = height - 1; row >= 0; row--) {
                 stream.readFully(pixels[row], 0, width);
                 stream.skipBytes(padding);
             }
-
+        } catch (FileNotFoundException e) {
+            throw new IOException("File not found: " + filename);
         }
     }
 
