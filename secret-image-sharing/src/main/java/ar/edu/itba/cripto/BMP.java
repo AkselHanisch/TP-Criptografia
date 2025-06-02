@@ -12,6 +12,21 @@ public class BMP {
     public final int height;
     public final byte[][] pixels;
 
+    public int seed;
+    public int order;
+
+    public BMP(byte[][] pixels, int seed, int order){
+        this.pixels = pixels;
+        this.height = pixels.length;
+        this.width = pixels[0].length;
+        this.seed = seed;
+        this.order = order;
+    }
+
+    public BMP(byte[][] pixels){
+        this(pixels, 0, 0);
+    }
+
     public BMP(String filename) throws IOException{
 
         try (DataInputStream stream = new DataInputStream(new BufferedInputStream(Files.newInputStream(Paths.get(filename))))){
@@ -19,7 +34,9 @@ public class BMP {
             if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M'){
                 throw new IOException("Not a valid BMP file");
             }
-            stream.skipBytes(8);
+            stream.skipBytes(4);
+            seed = Short.reverseBytes(stream.readShort()) & 0xFFFF;
+            order = Short.reverseBytes(stream.readShort()) & 0xFFFF;
 
             int bitmapOffset = Integer.reverseBytes(stream.readInt());
 
@@ -75,8 +92,8 @@ public class BMP {
             out.writeByte('B');
             out.writeByte('M');
             out.writeInt(Integer.reverseBytes(fileSize)); // file size
-            out.writeShort(Short.reverseBytes((short) 0)); // reserved1
-            out.writeShort(Short.reverseBytes((short) 0)); // reserved2
+            out.writeShort(Short.reverseBytes((short) seed)); // reserved1
+            out.writeShort(Short.reverseBytes((short) order)); // reserved2
             out.writeInt(Integer.reverseBytes(dataOffset)); // offset to pixel array
 
             out.writeInt(Integer.reverseBytes(40)); // header size
@@ -119,7 +136,19 @@ public class BMP {
     }
 
     public static void main(String[] args) throws IOException {
-        BMP bmp = new BMP("TestBMPs/Alfred.bmp");
-        bmp.toFile("Copy.bmp");
+        BMP bmp1 = new BMP("secretoK8/Angelinassd.bmp");
+        BMP bmp2 = new BMP("secretoK8/Gracessd.bmp");
+        BMP bmp3 = new BMP("secretoK8/Jimssd.bmp");
+        BMP bmp4 = new BMP("secretoK8/Lizssd.bmp");
+        BMP bmp5 = new BMP("secretoK8/Robertossd.bmp");
+        BMP bmp6 = new BMP("secretoK8/Shakirassd.bmp");
+        BMP bmp7 = new BMP("secretoK8/Susanassd.bmp");
+        BMP bmp8 = new BMP("secretoK8/Whitneyssd.bmp");
+
+        bmp8.toFile("Copy.bmp");
+
+        BMP copy8 = new BMP("Copy.bmp");
+
+        System.out.println();
     }
 }
