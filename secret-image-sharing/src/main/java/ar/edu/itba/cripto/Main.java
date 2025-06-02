@@ -84,7 +84,7 @@ public class Main {
                     }
                     break;
                 case "-dir":
-                    if (dirPath != null || last){
+                    if (dirPath != "./" || last){
                         throw new InvalidParameterException();
                     }
                     dirPath = args[++i];
