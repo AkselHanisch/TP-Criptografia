@@ -1,6 +1,9 @@
 package ar.edu.itba.cripto;
 
 import ar.edu.itba.cripto.exception.InvalidParameterException;
+import ar.edu.itba.cripto.math.Lagrange;
+import ar.edu.itba.cripto.math.Pair;
+
 import java.io.*;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -38,7 +41,7 @@ public class Main {
                 System.out.println("Secret image: " + main.imagePath + ", " + secret.width + "x" + secret.height);
                 File dir = new File("ar\\edu\\itba\\cripto\\" + (main.dirPath != null ? main.dirPath : "."));
                 List<BMP> carriers = new ArrayList<>();
-                File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".bmp"));
+                File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".bmp") && !name.contains("_modified"));
                 if (files == null || files.length < main.totalShadows) {
                     System.err.println("Error: Not enough BMPs in " + dir.getPath() + " (need " + main.totalShadows + ")");
                     System.exit(1);
@@ -48,12 +51,89 @@ public class Main {
                     carriers.add(carrier);
                     System.out.println("Carrier " + (i + 1) + ": " + files[i].getName() + ", " + carrier.width + "x" + carrier.height);
                 }
-                byte firstPixel = secret.pixels[0][0];
-                System.out.println("First pixel value: " + (firstPixel & 0xFF));
-                distributePixel(firstPixel, main.minimumShadows, main.totalShadows, carriers);
-            } else {
-                System.out.println("Restore mode not implemented yet");
+                // Process all pixels
+                int pixelIndex = 0;
+                for (int row = 0; row < secret.height; row++) {
+                    for (int col = 0; col < secret.width; col++) {
+                        byte pixel = secret.pixels[row][col];
+                        distributePixel(pixel, main.minimumShadows, main.totalShadows, carriers, pixelIndex);
+                        pixelIndex++;
+                    }
+                }
+                // Save carriers at the end
+                for (int i = 0; i < main.totalShadows; i++) {
+                    try {
+                        carriers.get(i).toFile("ar\\edu\\itba\\cripto\\varias\\carrier" + (i + 1) + "_modified.bmp");
+                    } catch (IOException e) {
+                        System.err.println("Error saving carrier " + (i + 1) + ": " + e.getMessage());
+                        System.exit(1);
+                    }
+                }
+                System.out.println("Distribution complete for all " + secret.width + "x" + secret.height + " pixels.");
             }
+            else {
+                BMP restored = new BMP(main.imagePath); // Create BMP to restore into
+                List<BMP> carriers = new ArrayList<>();
+            
+                for (int i = 0; i < main.minimumShadows; i++) {
+                    String carrierPath = "ar\\edu\\itba\\cripto\\varias\\carrier" + (i + 1) + "_modified.bmp";
+                    carriers.add(new BMP(carrierPath));
+                }
+            
+                // Validate that carriers are large enough
+                int carrierHeight = carriers.get(0).pixels.length;
+                int carrierWidth = carriers.get(0).pixels[0].length;
+                int totalAvailablePixels = (carrierHeight * carrierWidth) / 8;
+            
+                int requiredPixels = restored.height * restored.width;
+                if (requiredPixels > totalAvailablePixels) {
+                    System.err.println("Error: Not enough data in carrier images to restore full image.");
+                    System.exit(1);
+                }
+            
+                // Process all pixels
+                int pixelIndex = 0;
+                for (int row = 0; row < restored.height; row++) {
+                    for (int col = 0; col < restored.width; col++) {
+                        // Extract 8-bit shares from k carriers
+                        Pair[] shadows = new Pair[main.minimumShadows];
+                        int baseBitIndex = pixelIndex * 8;
+            
+                        for (int i = 0; i < main.minimumShadows; i++) {
+                            int x = i + 1;
+                            int share = 0;
+                            byte[][] carrierPixels = carriers.get(i).pixels;
+            
+                            for (int bit = 0; bit < 8; bit++) {
+                                int bitIndex = baseBitIndex + bit;
+                                int r = bitIndex / carrierWidth;
+                                int c = bitIndex % carrierWidth;
+            
+                                int bitValue = carrierPixels[r][c] & 0x01;
+                                share = (share << 1) | bitValue;
+                            }
+            
+                            shadows[i] = new Pair(x, share);
+                        }
+            
+                        // Recover secret using Lagrange interpolation
+                        Lagrange lagrange = new Lagrange(shadows, 257);
+                        int secret = lagrange.eval(0);
+                        restored.pixels[row][col] = (byte) (secret & 0xFF); // Store recovered pixel
+                        pixelIndex++;
+                    }
+                }
+            
+                // Save restored image
+                try {
+                    restored.toFile("ar\\edu\\itba\\cripto\\restored_clave.bmp");
+                    System.out.println("Restored image saved as restored_clave.bmp");
+                } catch (IOException e) {
+                    System.err.println("Error saving restored image: " + e.getMessage());
+                    System.exit(1);
+                }
+            }
+            
         } catch (IOException e) {
             System.err.println("BMP error: " + e.getMessage());
             System.exit(1);
@@ -130,22 +210,34 @@ public class Main {
         return shares;
     }
 
-// Replace the distributePixel method in Main.java
-    private static void distributePixel(byte pixel, int k, int n, List<BMP> carriers) throws IOException {
+    private static void distributePixel(byte pixel, int k, int n, List<BMP> carriers, int pixelIndex) throws IOException {
         int pixelValue = pixel & 0xFF;
-        System.out.println("Splitting pixel " + pixelValue + " into " + n + " shares, k=" + k);
         int[] shares = generateShares(pixelValue, k, n);
+    
         for (int i = 0; i < n; i++) {
-            int share = shares[i];
-            byte[][] carrierPixels = carriers.get(i).pixels; // 2D array
-            carrierPixels[0][0] = (byte) ((carrierPixels[0][0] & 0xFE) | (share & 0x01)); // Modify LSB of [0][0]
-            try {
-                carriers.get(i).toFile("ar\\edu\\itba\\cripto\\varias\\carrier" + (i + 1) + "_modified.bmp"); // Save
-            } catch (IOException e) {
-                System.err.println("Error saving carrier " + (i + 1) + ": " + e.getMessage());
-                throw e;
+            int share = shares[i]; // 0–256
+            byte[][] carrierPixels = carriers.get(i).pixels;
+            int carrierHeight = carrierPixels.length;
+            int carrierWidth = carrierPixels[0].length;
+    
+            // Each pixel consumes 8 bits → 8 locations per carrier
+            int totalAvailableBits = carrierHeight * carrierWidth;
+            int totalAvailablePixels = totalAvailableBits / 8;
+    
+            if (pixelIndex >= totalAvailablePixels) {
+                System.err.println("Error: Not enough space in carrier image to store all pixels.");
+                System.exit(1);
             }
-            System.out.println("Share " + (i + 1) + ": " + share + " embedded in carrier " + (i + 1));
+    
+            int baseBitIndex = pixelIndex * 8;
+            for (int bit = 0; bit < 8; bit++) {
+                int bitIndex = baseBitIndex + bit;
+                int row = bitIndex / carrierWidth;
+                int col = bitIndex % carrierWidth;
+    
+                int bitValue = (share >> (7 - bit)) & 0x01; // MSB to LSB
+                carrierPixels[row][col] = (byte) ((carrierPixels[row][col] & 0xFE) | bitValue); // Replace LSB
+            }
         }
-    }
+    }    
 }
