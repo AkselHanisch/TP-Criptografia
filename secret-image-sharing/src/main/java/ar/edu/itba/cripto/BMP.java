@@ -158,21 +158,31 @@ public class BMP {
 
     public static void main(String[] args) throws IOException{
 
+        BMP secret = new BMP("testSecreto/Angelinassd.bmp");
+
+        Shadow[] shadows = EncryptionAlgorithm.encrypt(secret, 8, 8, 10);
+
+
         BMP[] carriers = {
-             new BMP("secretoK8/Angelinassd.bmp"),
-               new BMP("secretoK8/Gracessd.bmp"),
-               new BMP("secretoK8/Jimssd.bmp"),
-             new BMP("secretoK8/Lizssd.bmp"),
-              new BMP("secretoK8/Robertossd.bmp"),
-               new BMP("secretoK8/Shakirassd.bmp"),
-               new BMP("secretoK8/Susanassd.bmp"),
-              new BMP("secretoK8/Whitneyssd.bmp")
+             new BMP("testSecreto/Angelinassd.bmp"),
+               new BMP("testSecreto/Gracessd.bmp"),
+               new BMP("testSecreto/Jimssd.bmp"),
+             new BMP("testSecreto/Lizssd.bmp"),
+              new BMP("testSecreto/Robertossd.bmp"),
+               new BMP("testSecreto/Shakirassd.bmp"),
+               new BMP("testSecreto/Susanassd.bmp"),
+              new BMP("testSecreto/Whitneyssd.bmp")
         };
 
-        Shadow[] shadows = Arrays.stream(carriers).map(BMP::toShadow).toArray(Shadow[]::new);
+        for(int i = 0; i < shadows.length; i++){
+            carriers[i] = new BMP(LSB.distribute(carriers[i].pixels, shadows[i].data()), 10, shadows[i].order());
+            carriers[i].toFile("secretoOculto/" + i + ".bmp");
+        }
 
 
-        new BMP(EncryptionAlgorithm.decrypt(shadows, carriers[0].seed, carriers[0].width, carriers[0].height)).toFile("result.bmp");
+        Shadow[] resultShadows = Arrays.stream(carriers).map(BMP::toShadow).toArray(Shadow[]::new);
+        new BMP(EncryptionAlgorithm.decrypt(resultShadows, 10, carriers[0].width, carriers[0].height)).toFile("result.bmp");
+
 
 
         System.out.println();

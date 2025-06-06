@@ -3,9 +3,6 @@ package ar.edu.itba.cripto;
 import ar.edu.itba.cripto.math.Lagrange;
 import ar.edu.itba.cripto.math.Mod;
 import ar.edu.itba.cripto.math.Pair;
-
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Random;
 
 public class EncryptionAlgorithm {

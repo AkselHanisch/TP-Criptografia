@@ -33,6 +33,7 @@ public class Lagrange {
     }
 
 
+
     public int[] getCoefficients(){
         int[] coefficients = new int[shadows.length];
 
@@ -54,6 +55,7 @@ public class Lagrange {
 
         return coefficients;
     }
+
 
     public static void main(String[] args){
         Pair[] shadows = new Pair[]{

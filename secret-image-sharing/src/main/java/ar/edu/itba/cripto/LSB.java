@@ -70,7 +70,7 @@ public class LSB {
 
 
     public static void main(String[] args) throws IOException {
-        Random random = new Random();
+/*        Random random = new Random();
 
         BMP test = new BMP("TestBMPs/Alfred.bmp");
         byte[] shadow = new byte[(test.height* test.width)/8];
@@ -84,6 +84,10 @@ public class LSB {
 
         byte[] recover = recover(altered);
 
-        System.out.println(Arrays.toString(recover));
+        System.out.println(Arrays.toString(recover));*/
+
+        BMP test = new BMP("TestBMPs/Alfred.bmp");
+
+        new BMP(test.pixels, 641, 3).toFile("hola.bmp");
     }
 }
