@@ -32,35 +32,50 @@ public class BMP {
             if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M') {
                 throw new IOException("Not a valid BMP file: " + filename);
             }
-            stream.skipBytes(4); // Skip file size (bytes 2-5)
-            stream.skipBytes(4); // Skip reserved (bytes 6-9)
-            int bitmapOffset = Integer.reverseBytes(stream.readInt()); // Bytes 10-13
-            int bitmapInfoHeaderLength = Integer.reverseBytes(stream.readInt()); // Bytes 14-17
+
+            stream.skipBytes(4);
+
+            seed = Short.reverseBytes(stream.readShort()) & 0xFFFF;
+            order = Short.reverseBytes(stream.readShort()) & 0xFFFF;
+
+
+            int bitmapOffset = Integer.reverseBytes(stream.readInt());
+
+            int bitmapInfoHeaderLength = Integer.reverseBytes(stream.readInt());
             if (bitmapInfoHeaderLength != 40) {
                 throw new IOException("Unsupported BMP version (header size " + bitmapInfoHeaderLength + ", expected 40): " + filename);
             }
-            width = Integer.reverseBytes(stream.readInt()); // Bytes 18-21
-            height = Integer.reverseBytes(stream.readInt()); // Bytes 22-25
-            stream.skipBytes(2); // Skip planes (bytes 26-27)
-            int bitsPerPixel = Short.reverseBytes(stream.readShort()) & 0xFFFF; // Bytes 28-29
+
+            width = Integer.reverseBytes(stream.readInt());
+            height = Integer.reverseBytes(stream.readInt());
+
+            stream.skipBytes(2);
+
+            int bitsPerPixel = Short.reverseBytes(stream.readShort()) & 0xFFFF;
             if (bitsPerPixel != 8) {
                 throw new IOException("Unsupported BMP format (bits per pixel " + bitsPerPixel + ", expected 8): " + filename);
             }
-            int compressionType = Integer.reverseBytes(stream.readInt()); // Bytes 30-33
+
+            int compressionType = Integer.reverseBytes(stream.readInt());
             if (compressionType != 0) {
-                throw new IOException("BMP file compressed (compression type " + compressionType + "): " + filename);
+                throw new IOException("BMP file is compressed (compression type " + compressionType + "): " + filename);
             }
+
             int rowSize = ((width + 3) / 4) * 4;
             int padding = rowSize - width;
+
             pixels = new byte[height][width];
+
             long skipped = stream.skip(bitmapOffset - HEADER_BYTES_READ);
             if (skipped != bitmapOffset - HEADER_BYTES_READ) {
                 throw new IOException("Failed to reach pixel data (offset " + bitmapOffset + ", skipped " + skipped + " of " + (bitmapOffset - HEADER_BYTES_READ) + "): " + filename);
             }
+
             for (int row = height - 1; row >= 0; row--) {
                 stream.readFully(pixels[row], 0, width);
                 stream.skipBytes(padding);
             }
+
         } catch (FileNotFoundException e) {
             throw new IOException("File not found: " + filename);
         }
@@ -79,18 +94,26 @@ public class BMP {
 
             out.writeByte('B');
             out.writeByte('M');
-            out.writeInt(Integer.reverseBytes(fileSize)); // file size
-            out.writeShort(Short.reverseBytes((short) seed)); // reserved1
-            out.writeShort(Short.reverseBytes((short) order)); // reserved2
-            out.writeInt(Integer.reverseBytes(dataOffset)); // offset to pixel array
 
-            out.writeInt(Integer.reverseBytes(40)); // header size
+            out.writeInt(Integer.reverseBytes(fileSize));
+
+            out.writeShort(Short.reverseBytes((short) seed));
+            out.writeShort(Short.reverseBytes((short) order));
+
+            out.writeInt(Integer.reverseBytes(dataOffset));
+
+            out.writeInt(Integer.reverseBytes(40)); //header size
+
             out.writeInt(Integer.reverseBytes(width));
             out.writeInt(Integer.reverseBytes(height));
+
             out.writeShort(Short.reverseBytes((short) 1)); // color planes
+
             out.writeShort(Short.reverseBytes((short) 8)); // bits per pixel
-            out.writeInt(Integer.reverseBytes(0)); // compression (0 = none)
-            out.writeInt(Integer.reverseBytes(pixelArraySize)); // size of pixel array
+
+            out.writeInt(Integer.reverseBytes(0)); //compresion
+
+            out.writeInt(Integer.reverseBytes(pixelArraySize));
             out.writeInt(Integer.reverseBytes(2835)); // horizontal resolution (pixels/meter)
             out.writeInt(Integer.reverseBytes(2835)); // vertical resolution (pixels/meter)
             out.writeInt(Integer.reverseBytes(256)); // colors in palette
@@ -122,6 +145,8 @@ public class BMP {
             System.out.println();
         }
     }
+
+
 
     public static void main(String[] args) throws IOException {
         BMP bmp1 = new BMP("secretoK8/Angelinassd.bmp");

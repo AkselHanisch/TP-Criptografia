@@ -17,7 +17,7 @@ public class Lagrange {
         for(int i = 0; i < shadows.length; i++){
             result += shadows[i].y() * L(x, i);
         }
-        return mod(result);
+        return Mod.mod(result, m);
     }
 
     private int L(int x, int i){
@@ -29,8 +29,9 @@ public class Lagrange {
                 denominator *= (shadows[i].x() - shadows[j].x());
             }
         }
-        return numerator * inverseMod(denominator);
+        return numerator * Mod.inverseMod(denominator, m);
     }
+
 
     public int[] getCoefficients(){
         int[] coefficients = new int[shadows.length];
@@ -40,41 +41,32 @@ public class Lagrange {
 
         for(int i = 1; i < coefficients.length; i++){
             Pair[] newShadows = new Pair[prevShadows.length-1];
-            for (int j = 0; j < prevShadows.length-1; j++){
+            for(int j = 0; j < prevShadows.length-1; j++){
                 newShadows[j] = new Pair(
                         prevShadows[j].x(),
-                        mod((prevShadows[j].y()-coefficients[i-1]) * inverseMod(prevShadows[j].x()))
+                        Mod.mod((prevShadows[j].y() - coefficients[i-1]) * Mod.inverseMod(prevShadows[j].x(), m), m)
                 );
             }
-            coefficients[i] = new Lagrange(newShadows, 11).eval(0);
+
+            coefficients[i] = new Lagrange(newShadows, m).eval(0);
             prevShadows = newShadows;
         }
 
         return coefficients;
     }
 
-    public int mod(int n){
-        return ((n % m) + m) % m;
-    }
-
-    public int inverseMod(int n){
-        n = mod(n);
-        for (int x = 1; x < m; x++){
-            if ((n * x) % m == 1){
-                return x;
-            }
-        }
-        throw new ArithmeticException("No inverse exists");
-    }
-
-
     public static void main(String[] args){
         Pair[] shadows = new Pair[]{
-                new Pair(1, 3),
-                new Pair(5, 10),
-                new Pair(2, 9),
+                new Pair(1, ((byte)-27) & 0xFF),
+                new Pair(2, 7),
+                new Pair(3, 85),
+                new Pair(4, 0),
+                new Pair(5, 14),
+                new Pair(6, ((byte)-83) & 0xFF),
+                new Pair(7, 45),
+                new Pair(8, 1),
         };
-        Lagrange l = new Lagrange(shadows, 11);
+        Lagrange l = new Lagrange(shadows, 257);
         System.out.println(Arrays.toString(l.getCoefficients()));
     }
 }
