@@ -70,24 +70,32 @@ public class LSB {
 
 
     public static void main(String[] args) throws IOException {
-/*        Random random = new Random();
 
-        BMP test = new BMP("TestBMPs/Alfred.bmp");
-        byte[] shadow = new byte[(test.height* test.width)/8];
-        for(int i = 0; i < shadow.length; i++){
-            shadow[i] = (byte) random.nextInt(256);
+        Random random = new Random(10);
+
+        BMP test = new BMP("target.bmp");
+
+        byte[] secret = new byte[(test.width*test.height)/8];
+        for(int i = 0; i < secret.length; i++){
+            secret[i] = (byte) random.nextInt(256);
         }
 
-        byte[][] altered = distribute(test.pixels, shadow);
+        byte[][] distributed = distribute(test.pixels, secret);
 
-        new BMP(altered).toFile("altered.bmp");
+        new BMP(distributed).toFile("distributed.bmp");
 
-        byte[] recover = recover(altered);
+        byte[] recovered = recover(distributed);
 
-        System.out.println(Arrays.toString(recover));*/
 
-        BMP test = new BMP("TestBMPs/Alfred.bmp");
+        System.out.println(Arrays.toString(recovered));
 
-        new BMP(test.pixels, 641, 3).toFile("hola.bmp");
+        random = new Random(10);
+        for(int i  = 0; i < secret.length; i++){
+            if (recovered[i] != (byte) random.nextInt(256)){
+                throw new RuntimeException("bad");
+            }
+        }
+
+
     }
 }
