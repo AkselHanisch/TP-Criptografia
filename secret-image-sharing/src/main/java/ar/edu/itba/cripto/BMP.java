@@ -3,6 +3,7 @@ package ar.edu.itba.cripto;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 public class BMP {
 
@@ -134,6 +135,13 @@ public class BMP {
         }
     }
 
+    public Shadow toShadow(){
+        return new Shadow(
+                LSB.recover(pixels),
+                order
+        );
+    }
+
     public void printAscii(){
         for (int i = 0; i < height; i++){
             for (int j = 0; j < width; j++){
@@ -148,20 +156,27 @@ public class BMP {
 
 
 
-    public static void main(String[] args) throws IOException {
-        BMP bmp1 = new BMP("secretoK8/Angelinassd.bmp");
-        BMP bmp2 = new BMP("secretoK8/Gracessd.bmp");
-        BMP bmp3 = new BMP("secretoK8/Jimssd.bmp");
-        BMP bmp4 = new BMP("secretoK8/Lizssd.bmp");
-        BMP bmp5 = new BMP("secretoK8/Robertossd.bmp");
-        BMP bmp6 = new BMP("secretoK8/Shakirassd.bmp");
-        BMP bmp7 = new BMP("secretoK8/Susanassd.bmp");
-        BMP bmp8 = new BMP("secretoK8/Whitneyssd.bmp");
+    public static void main(String[] args) throws IOException{
 
-        bmp8.toFile("Copy.bmp");
+        BMP[] carriers = {
+             new BMP("secretoK8/Angelinassd.bmp"),
+               new BMP("secretoK8/Gracessd.bmp"),
+               new BMP("secretoK8/Jimssd.bmp"),
+             new BMP("secretoK8/Lizssd.bmp"),
+              new BMP("secretoK8/Robertossd.bmp"),
+               new BMP("secretoK8/Shakirassd.bmp"),
+               new BMP("secretoK8/Susanassd.bmp"),
+              new BMP("secretoK8/Whitneyssd.bmp")
+        };
 
-        BMP copy8 = new BMP("Copy.bmp");
+        Shadow[] shadows = Arrays.stream(carriers).map(BMP::toShadow).toArray(Shadow[]::new);
+
+
+        new BMP(EncryptionAlgorithm.decrypt(shadows, carriers[0].seed, carriers[0].width, carriers[0].height)).toFile("result.bmp");
+
 
         System.out.println();
+
+
     }
 }
