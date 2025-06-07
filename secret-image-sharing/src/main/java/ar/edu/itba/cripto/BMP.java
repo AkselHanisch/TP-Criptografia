@@ -9,6 +9,8 @@ public class BMP {
 
     private static final int HEADER_BYTES_READ = 34;
 
+    public String filename;
+
     public final int width;
     public final int height;
     public final byte[][] pixels;
@@ -29,6 +31,7 @@ public class BMP {
     }
 
     public BMP(String filename) throws IOException {
+        this.filename = filename;
         try (DataInputStream stream = new DataInputStream(new BufferedInputStream(Files.newInputStream(Paths.get(filename))))) {
             if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M') {
                 throw new IOException("Not a valid BMP file: " + filename);
@@ -82,7 +85,12 @@ public class BMP {
         }
     }
 
+    public void toFile() throws IOException {
+        toFile(filename);
+    }
+
     public void toFile(String filename) throws IOException{
+        this.filename = filename;
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(Paths.get(filename))))){
 
             int rowSize = ((width + 3) / 4) * 4;
@@ -137,8 +145,20 @@ public class BMP {
 
     public Shadow toShadow(){
         return new Shadow(
-                LSB.recover(pixels),
-                order
+                LSB.recover(pixels).shadow,
+                order,
+                height,
+                width
+        );
+    }
+
+    public Shadow toShadowWithMetadata(int k){
+        LSB.RecoveryResult recovery = LSB.recoverWithMetadata(pixels, k);
+        return new Shadow(
+                recovery.shadow,
+                order,
+                recovery.secretHeight,
+                recovery.secretWidth
         );
     }
 
@@ -152,42 +172,5 @@ public class BMP {
 
             System.out.println();
         }
-    }
-
-
-
-    public static void main(String[] args) throws IOException{
-        BMP secret = new BMP("secret.bmp");
-
-        int seed = 42;
-        Shadow[] shadows = EncryptionAlgorithm.encrypt(secret, 8,8, seed);
-
-        BMP[] carriers = {
-             new BMP("secretoK8/Angelinassd.bmp"),
-               new BMP("secretoK8/Gracessd.bmp"),
-               new BMP("secretoK8/Jimssd.bmp"),
-             new BMP("secretoK8/Lizssd.bmp"),
-              new BMP("secretoK8/Robertossd.bmp"),
-               new BMP("secretoK8/Shakirassd.bmp"),
-               new BMP("secretoK8/Susanassd.bmp"),
-              new BMP("secretoK8/Whitneyssd.bmp")
-        };
-
-        for(int i = 0; i < 8; i++){
-           carriers[i] = new BMP(
-                   LSB.distribute(carriers[i].pixels, shadows[i].data()),
-                   seed,
-                   shadows[i].order()
-           );
-           carriers[i].toFile("generatedCarriers/" + shadows[i].order() + ".bmp");
-        }
-
-
-        Shadow[] resultShadows = Arrays.stream(carriers).map(BMP::toShadow).toArray(Shadow[]::new);
-
-
-        new BMP(EncryptionAlgorithm.decrypt(resultShadows, seed,carriers[0].width, carriers[0].height)).toFile("result.bmp");
-
-
     }
 }

@@ -39,7 +39,7 @@ public class LSB {
 
         return result;
     }
-    public static byte[] recover(byte[][] image) {
+    public static RecoveryResult recover(byte[][] image) {
         int height = image.length;
         int width = image[0].length;
         int totalPixels = height * width;
@@ -64,7 +64,7 @@ public class LSB {
             }
         }
 
-        return result;
+        return new RecoveryResult(result, height, width);
     }
 
     public static byte[][] distributeWithMetadata(byte[][] image, byte[] shadow, int secretHeight, int secretWidth){
@@ -122,7 +122,6 @@ public class LSB {
     }
 
     public static RecoveryResult recoverWithMetadata(byte[][] image, int k){
-        int rows = image.length;
         int cols = image[0].length;
 
         int bitIndex = 0;
@@ -161,33 +160,4 @@ public class LSB {
         return new RecoveryResult(shadow, secretHeight, secretWidth);
     }
 
-    public static void main(String[] args) throws IOException {
-
-        Random random = new Random(10);
-
-        BMP test = new BMP("result.bmp");
-
-        byte[] shadow = new byte[(100*101)/8];
-        for(int i = 0; i < shadow.length; i++){
-            shadow[i] = (byte) random.nextInt(256);
-        }
-
-        byte[][] distributed = distributeWithMetadata(test.pixels, shadow, 100, 101);
-
-        new BMP(distributed).toFile("distributed.bmp");
-
-        RecoveryResult recovered = recoverWithMetadata(distributed, 8);
-
-
-        System.out.println(recovered.secretHeight);
-        System.out.println(recovered.secretWidth);
-
-        random = new Random(10);
-        for(int i  = 0; i < shadow.length; i++){
-            if (recovered.shadow[i] != (byte) random.nextInt(256)){
-                throw new RuntimeException("bad");
-            }
-        }
-
-    }
 }

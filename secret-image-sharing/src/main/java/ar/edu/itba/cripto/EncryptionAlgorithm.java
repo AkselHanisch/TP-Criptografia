@@ -19,7 +19,9 @@ public class EncryptionAlgorithm {
         for(int i = 0; i < n; i++){
             shadows[i] = new Shadow(
                     new byte[totalPolynomials],
-                    i+1
+                    i+1,
+                    image.height,
+                    image.width
             );
         }
 

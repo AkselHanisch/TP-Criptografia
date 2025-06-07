@@ -1,4 +1,4 @@
-package ar.edu.itba.cripto;
+package ar.edu.itba.cripto.utils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -8,7 +8,7 @@ import java.io.*;
 public class ImageBMPConverter {
 
     public static void main(String[] args) throws IOException {
-        File inputFile = new File("one-piece.jpg"); // or "input.png"
+        File inputFile = new File("input.jpg"); // or "input.png"
         BufferedImage original = ImageIO.read(inputFile);
 
         // Resize the image to your desired dimensions

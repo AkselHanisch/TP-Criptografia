@@ -1,4 +1,4 @@
-package ar.edu.itba.cripto;
+package ar.edu.itba.cripto.utils;
 
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
