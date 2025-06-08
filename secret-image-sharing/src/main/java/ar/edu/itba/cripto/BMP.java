@@ -91,13 +91,4 @@ public class BMP {
         System.arraycopy(pixels, 0, result, header.length, pixels.length);
         Files.write(Paths.get(filename), result);
     }
-
-    public static void main(String[] args) throws IOException{
-        BMP aux = new BMP("grupo8/Angelinassd.bmp");
-
-        BMP alt = new BMP(aux.pixels, aux.width, aux.height);
-
-        alt.toFile("new.bmp", aux.header);
-    }
-
 }
