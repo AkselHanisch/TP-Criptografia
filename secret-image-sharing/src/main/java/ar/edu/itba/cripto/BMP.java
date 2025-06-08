@@ -2,18 +2,19 @@ package ar.edu.itba.cripto;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class BMP {
 
-    private static final int HEADER_BYTES_READ = 34;
+    public static final int OFFSET_PIXEL_ARRAY_POSITION = 10;
 
     public String filename;
 
-    public final int width;
-    public final int height;
-    public final byte[][] pixels;
+    public int width;
+    public int height;
+    public byte[][] pixels;
 
     public int seed;
     public int order;
@@ -32,61 +33,20 @@ public class BMP {
 
     public BMP(String filename) throws IOException {
         this.filename = filename;
-        try (DataInputStream stream = new DataInputStream(new BufferedInputStream(Files.newInputStream(Paths.get(filename))))) {
-            if (stream.readUnsignedByte() != 'B' || stream.readUnsignedByte() != 'M') {
-                throw new IOException("Not a valid BMP file: " + filename);
-            }
 
-            stream.skipBytes(4);
+        byte[] data = Files.readAllBytes(Path.of(filename));
 
-            seed = Short.reverseBytes(stream.readShort()) & 0xFFFF;
-            order = Short.reverseBytes(stream.readShort()) & 0xFFFF;
+        int offset = (data[OFFSET_PIXEL_ARRAY_POSITION] & 0xFF)
+                | ((data[OFFSET_PIXEL_ARRAY_POSITION + 1] & 0xFF) << 8)
+                | ((data[OFFSET_PIXEL_ARRAY_POSITION + 2] & 0xFF) << 16)
+                | ((data[OFFSET_PIXEL_ARRAY_POSITION + 3] & 0xFF) << 24);
 
-
-            int bitmapOffset = Integer.reverseBytes(stream.readInt());
-
-            int bitmapInfoHeaderLength = Integer.reverseBytes(stream.readInt());
-            if (bitmapInfoHeaderLength != 40) {
-                throw new IOException("Unsupported BMP version (header size " + bitmapInfoHeaderLength + ", expected 40): " + filename);
-            }
-
-            width = Integer.reverseBytes(stream.readInt());
-            height = Integer.reverseBytes(stream.readInt());
-
-            stream.skipBytes(2);
-
-            int bitsPerPixel = Short.reverseBytes(stream.readShort()) & 0xFFFF;
-            if (bitsPerPixel != 8) {
-                throw new IOException("Unsupported BMP format (bits per pixel " + bitsPerPixel + ", expected 8): " + filename);
-            }
-
-            int compressionType = Integer.reverseBytes(stream.readInt());
-            if (compressionType != 0) {
-                throw new IOException("BMP file is compressed (compression type " + compressionType + "): " + filename);
-            }
-
-            int rowSize = ((width + 3) / 4) * 4;
-            int padding = rowSize - width;
-
-            pixels = new byte[height][width];
-
-            long skipped = stream.skip(bitmapOffset - HEADER_BYTES_READ);
-            if (skipped != bitmapOffset - HEADER_BYTES_READ) {
-                throw new IOException("Failed to reach pixel data (offset " + bitmapOffset + ", skipped " + skipped + " of " + (bitmapOffset - HEADER_BYTES_READ) + "): " + filename);
-            }
-
-            for (int row = height - 1; row >= 0; row--) {
-                stream.readFully(pixels[row], 0, width);
-                stream.skipBytes(padding);
-            }
-
-        } catch (FileNotFoundException e) {
-            throw new IOException("File not found: " + filename);
+        if (offset <= 0 || offset > data.length) {
+            throw new IOException("Invalid BMP pixel offset: " + offset);
         }
-    }
 
-    public void toFile() throws IOException {
-        toFile(filename);
+        byte[] header = Arrays.copyOfRange(data, 0, offset);
+        byte[] pixelsTEMP = Arrays.copyOfRange(data, offset, data.length);
     }
 
     public void toFile(String filename) throws IOException{
@@ -173,4 +133,5 @@ public class BMP {
             System.out.println();
         }
     }
+
 }

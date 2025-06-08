@@ -4,37 +4,35 @@ import ar.edu.itba.cripto.math.Lagrange;
 import ar.edu.itba.cripto.math.Mod;
 import ar.edu.itba.cripto.math.Pair;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-public class EncryptionAlgorithm {
+public class EncryptionAlgroithm2 {
 
     private static final int PRIME_MOD = 257;
 
-    public static Shadow[] encrypt(BMP image, int n, int k, int seed){
-        byte[][] data = image.pixels;
-        xorImage(data, seed);
+    public static Shadow[] encrypt(byte[] image, int n, int k, int seed, int height, int width) {
+        byte[] data = xorImage(image, seed);
 
         Shadow[] shadows = new Shadow[n];
-        int totalPolynomials = (image.width * image.height) / k;
+        int totalPolynomials = data.length / k;
 
         for(int i = 0; i < n; i++){
             shadows[i] = new Shadow(
                     new byte[totalPolynomials],
                     i+1,
-                    image.height,
-                    image.width
-            );
+                    height,
+                    width
+            ); //TODO
         }
 
         int j = 0;
-        int pixels = image.width * image.height;
+        int pixels = data.length;
         int[][] polinomials = new int[totalPolynomials][k];
         int pol = 0;
         while (j < pixels){
             for(int i = 0; i < k; i++){
-                polinomials[pol][i] = data[j/image.width][j%image.width] & 0xFF;
+                polinomials[pol][i] = data[j] & 0xFF;
                 j++;
             }
             pol++;
@@ -59,7 +57,7 @@ public class EncryptionAlgorithm {
         return shadows;
     }
 
-    public static byte[][] decrypt(Shadow[] shadows, int seed, int width, int height){
+    public static byte[] decrypt(Shadow[] shadows, int seed, int width, int height){
         int k = shadows.length;
         int imagePixels = height * width;
 
@@ -73,15 +71,13 @@ public class EncryptionAlgorithm {
             }
         }
 
-        byte[][] data = new byte[height][width];
+        byte[] data = new byte[imagePixels];
         int idx = 0;
         for (int b = 0; b < blocks; b++) {
             int[] coefficients = new Lagrange(points[b], PRIME_MOD).getCoefficients();
 
             for (int i = 0; i < k; i++) {
-                int row = idx / width;
-                int col = idx % width;
-                data[row][col] = (byte) coefficients[i];
+                data[idx] = (byte) coefficients[i];
                 idx++;
             }
         }
@@ -89,27 +85,27 @@ public class EncryptionAlgorithm {
         return xorImage(data, seed);
     }
 
-    private static int evaluatePol(int[] coefficients, int x){
+
+    private static int evaluatePol(int[] coefficients, int x) {
         int result = coefficients[0];
-        for(int i = 1; i < coefficients.length; i++){
+        for (int i = 1; i < coefficients.length; i++) {
             result = Mod.mod(result + Mod.mod(coefficients[i] * Mod.modPow(x, i, PRIME_MOD), PRIME_MOD), PRIME_MOD);
         }
         return Mod.mod(result, PRIME_MOD);
     }
 
 
-    private static byte[][] xorImage(byte[][] data, int seed){
+    private static byte[] xorImage(byte[] data, int seed) {
         Random random = new Random();
         random.setSeed(seed);
 
-        for(int i = 0; i < data.length; i++){
-            for(int j = 0; j < data[0].length; j++){
-                int randomByte = random.nextInt(256);
-                data[i][j] = (byte) (((int)data[i][j] & 0xFF ) ^ randomByte);
-            }
+        byte[] result = new byte[data.length];
+
+        for (int i = 0; i < data.length; i++) {
+            int randomByte = random.nextInt(256);
+            result[i] = (byte) (((int) data[i] & 0xFF) ^ randomByte);
         }
 
-        return data;
+        return result;
     }
-
 }

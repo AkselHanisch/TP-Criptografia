@@ -135,14 +135,14 @@ public class Main {
         } else {
 
             if (arguments.k == 8){
-                BMP[] carriers = new BMP[arguments.k];
+                BMP2[] carriers = new BMP2[arguments.k];
                 int count = 0;
 
                 int targetWidth = 0, targetHeight = 0;
 
                 for (String path: carrierCandidates){
                     try {
-                        BMP bmp = new BMP(path);
+                        BMP2 bmp = new BMP2(path);
                         if (count == 0){
                             targetHeight = bmp.height;
                             targetWidth = bmp.width;
@@ -163,9 +163,21 @@ public class Main {
 
 
                 int seed = carriers[0].seed;
-                Shadow[] shadows = Arrays.stream(carriers).map(BMP::toShadow).toArray(Shadow[]::new);
+                Shadow[] shadows = Arrays.stream(carriers).map(BMP2::toShadow).toArray(Shadow[]::new);
                 try {
-                    new BMP(EncryptionAlgorithm.decrypt(shadows, seed, targetWidth, targetHeight)).toFile(arguments.secretPath);
+                    byte[][] pixelsMatrix = EncryptionAlgorithm.decrypt(shadows, seed, targetWidth, targetHeight);
+                    int rows = pixelsMatrix.length;
+                    int cols = pixelsMatrix[0].length;
+
+                    byte[] flat = new byte[rows * cols];
+                    int index = 0;
+
+                    for (int i = 0; i < rows; i++) {
+                        System.arraycopy(pixelsMatrix[i], 0, flat, index, cols);
+                        index += cols;
+                    }
+
+                    new BMP2(flat, targetWidth, targetHeight).toFile(arguments.secretPath, carriers[0].header);
                 } catch (IOException e) {
                     System.out.println("Error: could not write the secret image file");
                     System.exit(1);
