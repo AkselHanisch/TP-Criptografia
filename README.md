@@ -3,9 +3,19 @@
 Implementación del algoritmo de secreto compartido en imagenes descripto en el documento “An Efficient Secret Image Sharing Scheme” cuyos
 autores son Luang-Shyr Wu y Tsung-Ming Lo de la Universidad de Tecnología China de Taiwan.
 
+# Compilación:
+
+```bash
+mvn clean package
+```
+
+# Ejecución:
+
+```bash
+java -jar visualSSS.jar [params] 
+```
+
 # Utilización:
-
-
 
 El programa recibe los siguientes parámetros de forma obligatoria:
 
