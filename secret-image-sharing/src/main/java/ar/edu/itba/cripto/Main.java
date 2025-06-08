@@ -5,13 +5,11 @@ import ar.edu.itba.cripto.exception.InvalidParameterException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 
 public class Main {
-
 
     public static void main(String[] args){
         Arguments arguments = null;
@@ -37,7 +35,6 @@ public class Main {
             System.err.println("Error reading directory: " + e.getMessage());
             System.exit(1);
         }
-
 
         if (arguments.execMode == Arguments.ExecMode.DISTRIBUTE){
             int seed = new Random().nextInt(Short.MAX_VALUE + 1);
@@ -74,24 +71,19 @@ public class Main {
                 }
 
 
-                Shadow[] shadows = EncryptionAlgorithm.encrypt(secret, arguments.n, arguments.k, seed);
+                Shadow[] shadows = EncryptionAlgorithm.encrypt(secret.pixels, arguments.n, arguments.k, seed);
 
                 try {
                     for(int i = 0; i < arguments.n; i++){
-                        String filename = carriers[i].filename;
-                        carriers[i] = new BMP(
-                            LSB.distribute(carriers[i].pixels, shadows[i].data()),
-                            seed,
-                            shadows[i].order()
-                        );
-                        carriers[i].toFile(filename);
+                        carriers[i].setSeed(seed);
+                        carriers[i].setOrder(shadows[i].order());
+                        carriers[i].pixels = LSB.distribute(carriers[i].pixels, shadows[i].data());
+                        carriers[i].save();
                     }
                 } catch (IOException e){
                     System.out.println("Error: could not embed the shadow into the carrier");
                     System.exit(1);
                 }
-
-
             } else {
                 BMP[] carriers = new BMP[arguments.n];
                 int count = 0;
@@ -114,35 +106,29 @@ public class Main {
                 }
 
 
-                Shadow[] shadows = EncryptionAlgorithm.encrypt(secret, arguments.n, arguments.k, seed);
+                Shadow[] shadows = EncryptionAlgorithm.encrypt(secret.pixels, arguments.n, arguments.k, seed);
 
                 try {
                     for(int i = 0; i < arguments.n; i++){
-                        String filename = carriers[i].filename;
-                        carriers[i] = new BMP(
-                                LSB.distributeWithMetadata(carriers[i].pixels, shadows[i].data(), secret.height, secret.width),
-                                seed,
-                                shadows[i].order()
-                        );
-                        carriers[i].toFile(filename);
+                        carriers[i].setSeed(seed);
+                        carriers[i].setOrder(shadows[i].order());
+                        carriers[i].pixels = LSB.distributeWithMetadata(carriers[i].pixels, shadows[i].data(), secret.height, secret.width);
+                        carriers[i].save();
                     }
                 } catch (IOException e){
                     System.out.println("Error: could not embed the shadow into the carrier");
                     System.exit(1);
                 }
             }
-
         } else {
-
             if (arguments.k == 8){
-                BMP2[] carriers = new BMP2[arguments.k];
+                BMP[] carriers = new BMP[arguments.k];
                 int count = 0;
 
                 int targetWidth = 0, targetHeight = 0;
-
                 for (String path: carrierCandidates){
                     try {
-                        BMP2 bmp = new BMP2(path);
+                        BMP bmp = new BMP(path);
                         if (count == 0){
                             targetHeight = bmp.height;
                             targetWidth = bmp.width;
@@ -160,29 +146,23 @@ public class Main {
                     System.exit(1);
                 }
 
-
-
                 int seed = carriers[0].seed;
-                Shadow[] shadows = Arrays.stream(carriers).map(BMP2::toShadow).toArray(Shadow[]::new);
+                Shadow[] shadows = new Shadow[arguments.k];
+                for(int i = 0; i < arguments.k; i++){
+                    shadows[i] = new Shadow(
+                            LSB.recover(carriers[i].pixels),
+                            carriers[i].order
+                    );
+                }
+
+                byte[] decrypted = EncryptionAlgorithm.decrypt(shadows, seed);
+
                 try {
-                    byte[][] pixelsMatrix = EncryptionAlgorithm.decrypt(shadows, seed, targetWidth, targetHeight);
-                    int rows = pixelsMatrix.length;
-                    int cols = pixelsMatrix[0].length;
-
-                    byte[] flat = new byte[rows * cols];
-                    int index = 0;
-
-                    for (int i = 0; i < rows; i++) {
-                        System.arraycopy(pixelsMatrix[i], 0, flat, index, cols);
-                        index += cols;
-                    }
-
-                    new BMP2(flat, targetWidth, targetHeight).toFile(arguments.secretPath, carriers[0].header);
-                } catch (IOException e) {
+                    new BMP(decrypted, targetWidth, targetHeight).toFile(arguments.secretPath, carriers[0].header);
+                } catch (IOException e){
                     System.out.println("Error: could not write the secret image file");
                     System.exit(1);
                 }
-
             } else {
 
                 BMP[] carriers = new BMP[arguments.k];
@@ -204,18 +184,32 @@ public class Main {
 
                 int seed = carriers[0].seed;
                 final int k = arguments.k;
-                Shadow[] shadows = Arrays.stream(carriers).map((bmp) -> bmp.toShadowWithMetadata(k)).toArray(Shadow[]::new);
+
+                Shadow[] shadows = new Shadow[arguments.k];
+                int width = 0, height = 0;
+
+                for(int i = 0; i < arguments.k; i++){
+                    LSB.RecoveryResult result = LSB.recoverWithMetadata(carriers[i].pixels, arguments.k);
+                    shadows[i] = new Shadow(
+                            result.shadow,
+                            carriers[i].order
+                    );
+                    width = result.secretWidth;
+                    height = result.secretHeight;
+                }
+
+                byte[] decrypted = EncryptionAlgorithm.decrypt(shadows, seed);
+
 
                 try {
-                    new BMP(EncryptionAlgorithm.decrypt(shadows, seed, shadows[0].width(), shadows[0].height())).toFile(arguments.secretPath);
+                    new BMP(decrypted, width, height).toFile(arguments.secretPath, carriers[0].header);
                 } catch (IOException e) {
                     System.out.println("Error: could not write the secret image file");
                     System.exit(1);
                 }
 
             }
-
         }
-    }
 
+    }
 }
