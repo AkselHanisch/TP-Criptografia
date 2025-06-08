@@ -107,12 +107,4 @@ public class EncryptionAlgorithm {
         return result;
     }
 
-    public static void main(String[] args) throws IOException {
-        BMP sub = new BMP("Angelinassd.bmp");
-
-        sub.pixels = xorImage(sub.pixels, 10);
-
-        sub.save();
-
-    }
 }
